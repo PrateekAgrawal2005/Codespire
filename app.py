@@ -3,6 +3,14 @@ import streamlit as st
 from datetime import datetime
 import json
 import textwrap
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+# Session state initialization
+if "input_key" not in st.session_state:
+    st.session_state.input_key = 0
+if "prompt_value" not in st.session_state:
+    st.session_state.prompt_value = ""
 
 # Try import genai client
 try:
@@ -22,9 +30,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown(""" 
+st.markdown("""
 <style>
-/* (your full CSS here — same as before) */
 * {
     color-scheme: dark;
 }
@@ -285,7 +292,7 @@ st.markdown("""
 <div class="header-container">
     <h1>🤖 MINI AI HELPER</h1>
     <p>✨ Your Intelligent Learning & Problem-Solving Assistant</p>
-    <p style="font-size: 0.95em; margin-top: 8px;">Powered by Google Gemini 2.0 Flash</p>
+    <p style="font-size: 0.95em; margin-top: 8px;">Powered by Google Gemini 2.5 Flash</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -309,8 +316,8 @@ with st.sidebar:
     # AI Model selector
     model_choice = st.selectbox(
         "AI Model",
-        ["gemini-2.0-flash", "gemini-1.5-pro"],
-        help="⚡ Flash: Faster responses | 🧠 Pro: More detailed"
+        ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro"],
+        help="⚡ 2.5 Flash: Recommended | ⚡ 2.0 Flash: Fast | ⚡ 2.0 Flash Lite: Light | 🧠 2.5 Pro: Most capable"
     )
     
     # Response length
@@ -331,19 +338,30 @@ with st.sidebar:
     
     st.markdown('<div class="section-header">📋 System Prompt</div>', unsafe_allow_html=True)
     
-    default_prompt = """You are an expert AI assistant specializing in education, career guidance, coding, and problem-solving.
+    default_prompt = """You are an expert AI mentor and educator with deep knowledge in technology, coding, career development, and academics. You are enthusiastic, engaging, and love explaining things in a way that truly helps people understand and grow.
 
-**CORE BEHAVIORS:**
-✓ Provide CLEAR, STRUCTURED responses with headers and bullet points
-✓ Include PRACTICAL EXAMPLES and code snippets when relevant
-✓ Break COMPLEX TOPICS into easy-to-understand steps
-✓ Ask CLARIFYING QUESTIONS if the request is ambiguous
-✓ Avoid making up information - cite sources when possible
-✓ Provide ACTIONABLE NEXT STEPS and resources
-✓ Be ENCOURAGING and supportive in tone
-✓ Optimize response length based on user preference
-✓ Use BOLD text for important concepts
-✓ Format code in proper code blocks"""
+**YOUR PERSONALITY:**
+🎯 Passionate teacher who makes complex things simple and exciting
+💡 Always gives rich, detailed, thorough answers — never one-liners
+🚀 Motivating and encouraging — you believe in the user's potential
+🔍 Curious and thorough — you cover all angles of a topic
+
+**RESPONSE STYLE — ALWAYS DO THIS:**
+✅ Write LONG, DETAILED, THOROUGH responses — the more detail the better
+✅ Use clear ## headings and ### subheadings to organize content
+✅ Use bullet points, numbered lists, tables where helpful
+✅ Include REAL-WORLD EXAMPLES, analogies, and stories to explain concepts
+✅ Add code snippets with explanations whenever relevant
+✅ End EVERY response with: 🔥 Key Takeaways, ⭐ Next Steps, and 💬 Follow-up Questions the user can ask
+✅ Use emojis to make responses engaging and easy to scan
+✅ Bold **important terms** and highlight key concepts
+✅ If explaining a roadmap or plan — give it DAY BY DAY or WEEK BY WEEK with specifics
+✅ If explaining code — explain WHAT it does, WHY it works, and HOW to customize it
+
+**NEVER DO:**
+❌ Give short, vague, one-paragraph answers
+❌ Say "it depends" without explaining the options
+❌ Skip examples or just list theory without practical application"""
     
     SYSTEM_PROMPT = st.text_area(
         "Custom Instructions:",
@@ -401,15 +419,18 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("📚 Study Plan", use_container_width=True):
-        st.session_state.template = "Create a detailed 30-day learning roadmap for [TOPIC] starting from [YOUR_LEVEL]. Include daily schedule, resources, projects, and milestones."
+        st.session_state.prompt_value = "Create a detailed 30-day learning roadmap for [TOPIC] starting from [YOUR_LEVEL]. Include daily schedule, resources, projects, and milestones."
+        st.session_state.input_key += 1
 
 with col2:
     if st.button("💼 Career Guide", use_container_width=True):
-        st.session_state.template = "What are the best steps to become a [JOB_ROLE]? Provide required skills, learning path, timeline, salary expectations, and job search tips."
+        st.session_state.prompt_value = "What are the best steps to become a [JOB_ROLE]? Provide required skills, learning path, timeline, salary expectations, and job search tips."
+        st.session_state.input_key += 1
 
 with col3:
     if st.button("🐛 Debug Help", use_container_width=True):
-        st.session_state.template = "I'm getting this error in my [LANGUAGE] code: [ERROR_MESSAGE]. Here's my code: [PASTE_CODE]. How do I fix it step-by-step?"
+        st.session_state.prompt_value = "I'm getting this error in my [LANGUAGE] code: [ERROR_MESSAGE]. Here's my code: [PASTE_CODE]. How do I fix it step-by-step?"
+        st.session_state.input_key += 1
 
 # ------------------------------------
 # USER INPUT SECTION
@@ -459,21 +480,14 @@ st.markdown("---")
 # Main question input
 st.markdown('<div class="section-header">❓ WHAT DO YOU NEED HELP WITH?</div>', unsafe_allow_html=True)
 
-# Get template if one was clicked
-template_text = st.session_state.get("template", "")
-
 user_prompt = st.text_area(
     "Question",
-    value=template_text,
+    value=st.session_state.prompt_value,
     height=160,
     placeholder="Type your question, topic, or request here...\nExample: 'How to learn Python in 2 weeks?' or 'Debug my code'",
-    label_visibility="collapsed"
+    label_visibility="collapsed",
+    key=f"user_prompt_{st.session_state.input_key}"
 )
-
-# Clear template after use
-if template_text and user_prompt != template_text:
-    if "template" in st.session_state:
-        del st.session_state.template
 
 # ------------------------------------
 # ACTION BUTTONS
@@ -496,7 +510,8 @@ with col_btn4:
 # Handle buttons
 if clear_btn:
     st.session_state.response = None
-    user_prompt = ""
+    st.session_state.prompt_value = ""
+    st.session_state.input_key += 1
     st.rerun()
 
 if example_btn:
@@ -543,11 +558,11 @@ if help_btn:
     - Ask for step-by-step breakdowns
     - Request code examples or diagrams
     - Be clear about what you're trying to achieve
-    """)
+    """)        
 
 # Helper: map response length to max tokens
 def map_length_to_tokens(level: int) -> int:
-    return {1: 150, 2: 400, 3: 800, 4: 1200, 5: 2000}.get(level, 800)
+    return {1: 500, 2: 1000, 3: 2000, 4: 3500, 5: 6000}.get(level, 2000)
 
 # ------------------------------------
 # MAIN GENERATION LOGIC
@@ -562,11 +577,11 @@ if generate_btn:
     else:
         # Build comprehensive prompt
         response_instruction = {
-            1: "Keep response BRIEF and CONCISE (under 300 words). Focus on key points only.",
-            2: "Keep response MODERATE (300-600 words). Include some examples.",
-            3: "Provide BALANCED response (600-1000 words). Include examples and explanations.",
-            4: "Provide COMPREHENSIVE details (1000-1500 words). Full explanation with examples.",
-            5: "Provide EXTREMELY DETAILED response (1500+ words). Complete guide with all details and examples."
+            1: "Write a focused response (400-600 words) covering the key points with at least 1 example.",
+            2: "Write a solid response (700-1000 words) with examples, explanations, and a next steps section.",
+            3: "Write a detailed, well-structured response (1000-1500 words) with sections, examples, code if relevant, and actionable advice.",
+            4: "Write a COMPREHENSIVE, in-depth response (1500-2500 words). Cover all aspects, include multiple examples, pros/cons, tips, and a full action plan.",
+            5: "Write an EXHAUSTIVE, expert-level deep dive (2500+ words). This should feel like reading a complete guide or tutorial — cover everything from basics to advanced, with examples, code, comparisons, pitfalls, best practices, resources, and a step-by-step action plan."
         }
         
         user_context = f"""**USER CONTEXT:**
@@ -610,7 +625,10 @@ Please format your response with:
                     )
                 )
                 
-                output = response.text
+                output = response.text or ""
+                if not output.strip():
+                    st.warning("⚠️ The AI returned an empty response. Try rephrasing your question.")
+                    st.stop()
                 
                 # Display success message
                 st.markdown("""
@@ -622,7 +640,7 @@ Please format your response with:
                 # Display output in beautiful container
                 st.markdown('<div class="output-container">', unsafe_allow_html=True)
                 st.markdown("### 🧠 AI Response")
-                st.markdown(output, unsafe_allow_html=True)
+                st.markdown(output)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Additional actions
@@ -656,3 +674,4 @@ st.markdown("""
 Made with ❤️ for Students & Professionals Worldwide
 </div>
 """, unsafe_allow_html=True)
+
