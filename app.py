@@ -310,9 +310,6 @@ with st.sidebar:
     
     st.markdown("### 🎨 Customization")
     
-    # Theme selector
-    theme = st.selectbox("Theme", ["Dark (Recommended)", "Light"])
-    
     # AI Model selector
     model_choice = st.selectbox(
         "AI Model",
